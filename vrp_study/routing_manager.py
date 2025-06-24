@@ -200,9 +200,20 @@ class PDRoutingManager(RoutingManager):
             is_transit=False,
             routing_node=self._depo
         )
+        end_node = InnerNode(
+            id=0,
+            early_time=self._depo.start_time,
+            late_time=self._depo.end_time,
+            service_time=0,
+            demand=0,
+            is_transit=False,
+            routing_node=self._depo
+        )
+
         self._start_node = start_node
-        self._common_end_node = start_node
+        self._common_end_node = end_node
         self._inner_nodes.append(start_node)
+        self._inner_nodes.append(end_node)
 
         for crg in self._cargos:
             self._inner_nodes += [
