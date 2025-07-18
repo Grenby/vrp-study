@@ -47,7 +47,7 @@ def get_optimal_model_params() -> pywrapcp.DefaultRoutingSearchParameters:
     """
     search_parameters = pywrapcp.DefaultRoutingSearchParameters()
     search_parameters.first_solution_strategy = routing_enums_pb2.FirstSolutionStrategy.PARALLEL_CHEAPEST_INSERTION
-    search_parameters.local_search_metaheuristic = routing_enums_pb2.LocalSearchMetaheuristic.GUIDED_LOCAL_SEARCH
+    search_parameters.local_search_metaheuristic = routing_enums_pb2.LocalSearchMetaheuristic.GREEDY_DESCENT
     search_parameters.guided_local_search_lambda_coefficient = 0.0725
 
     search_parameters.local_search_operators.use_relocate = BOOL_FALSE

@@ -162,8 +162,8 @@ class RoutingManagerBuilder(ABC):
 
     def _validate(self):
         # todo сделать валидатор
-        raise NotImplementedError
-
+        # raise NotImplementedError
+        pass
     def _build(self) -> RoutingManager:
 
         self._create_inner_nodes()

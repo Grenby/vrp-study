@@ -73,7 +73,8 @@ class SolutionBuilder(InitialSolutionBuilder):
                         cg.edges()[a.id, c.id]['length'] = min(cost, cg.edges()[a.id, c.id]['length'])
                     else:
                         cg.add_edge(a.id, c.id, length=cost)
-
+        for u, v, d in cg.edges(data=True):
+            d['length'] = 1 / (d['length'] + 0.001)
         print(len(cg.nodes()), len(cg.edges), nx.is_connected(cg))
 
         if nx.is_connected(cg):
