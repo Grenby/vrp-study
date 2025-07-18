@@ -1,3 +1,4 @@
+import time
 from threading import Lock
 from typing import Optional
 
@@ -26,6 +27,7 @@ class SolutionCallback:
         self._best_objective = 1e10
         self.count = 0
         self.lock = Lock()
+        self.start_time = time.time()
 
     def __call__(self):
         with self.lock:
@@ -34,7 +36,8 @@ class SolutionCallback:
             value = self.model.CostVar().Max()
             self._best_objective = min(self._best_objective, value)
             best = self._best_objective
-        log.debug(f'find new solution ({count}): {value}, best solution: {best}')
+        delta = time.time() - self.start_time
+        log.debug(f'time: {delta:.3f}; new solution ({count}): {value}; best solution: {best}')
 
 
 def get_optimal_model_params() -> pywrapcp.DefaultRoutingSearchParameters:
@@ -353,7 +356,8 @@ def do_solve(
         routing_manager: RoutingManager,
         *,
         search_parameters: Optional[pywrapcp.DefaultRoutingSearchParameters] = None,
-        init_solution=None
+        init_solution=None,
+        cost='distance'
 ) -> Optional[tuple[float, list[list[int]], list[list[int]]]]:
     """
         Описание основной проблемы.
@@ -378,7 +382,10 @@ def do_solve(
     add_count_dimension(routing_manager, routing)
 
     add_pick_up_and_delivery(routing_manager, routing, manager)
-    add_vehicles_cost(routing_manager, routing, manager)
+    if cost == 'distance':
+        add_vehicles_cost(routing_manager, routing, manager)
+    else:
+        routing.SetFixedCostOfAllVehicles(1)
     add_time_window(routing_manager, routing, manager)
 
     add_mass_constraint(routing_manager, routing, manager)
@@ -436,10 +443,24 @@ def find_optimal_paths(
     log.info(f'problem size: {len(routing_manager.nodes())}')
     score, solution, times = do_solve(
         routing_manager,
-        init_solution=init_solution
+        init_solution=init_solution,
+        cost='car'
     )
-    log.info(f"best_score: {len([s for s in solution if len(s) > 0])}")
+    solution = [s[1:-1] for s in solution if len(s[1:-1]) > 0]
+    score = len([s for s in solution if len(s) > 0])
+    log.info(f"best_score: {score}")
+    cars = routing_manager.cars()[:score]
 
+    routing_manager_sub = routing_manager.sub_problem(
+        routing_manager.nodes(),
+        cars,
+        routing_manager.get_model_config()
+    )
+    car_id2index = {car.id: i for i, car in enumerate(routing_manager_sub.cars())}
+    score, solution, times = do_solve(
+        routing_manager_sub,
+        init_solution=solution,
+    )
     log.info(f"best_score: {score / 100:.2f}")
-
+    solution = [solution[car_id2index[car.id]] if car.id in car_id2index else [] for car in routing_manager.cars()]
     return solution, times

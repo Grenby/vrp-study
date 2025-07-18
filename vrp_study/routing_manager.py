@@ -48,6 +48,13 @@ class RoutingManager:
     _inner_cars: List[InnerCar]
     _pick_up_and_delivery_nodes: List[Pdp]
     _depo_index: int
+    _id2index: Optional[dict[int, int]] = field(init=False)
+
+    def __post_init__(self):
+        self._id2index = {n.id: i for i, n in enumerate(self._inner_nodes)}
+
+    def get_index(self, node: InnerNode):
+        return self._id2index[node.id]
 
     def get_distance(self, node_a: InnerNode, node_b: InnerNode) -> float:
         return float(self._dsts[node_a.id, node_b.id])
@@ -163,7 +170,8 @@ class RoutingManagerBuilder(ABC):
     def _validate(self):
         # todo сделать валидатор
         # raise NotImplementedError
-        pass
+        ...
+
     def _build(self) -> RoutingManager:
 
         self._create_inner_nodes()

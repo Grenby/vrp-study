@@ -114,3 +114,6 @@ class Route(Generic[T]):
     id: int = field(hash=True)  # идентиификатор маршрута
     path: list[T] = field(hash=False)  # путь в нодах или любой другом типе
     tariff: Tariff = field(hash=False)  # тип машины на данном маршруту
+
+# r: Route[Node] = Route()
+# r.path[0].
