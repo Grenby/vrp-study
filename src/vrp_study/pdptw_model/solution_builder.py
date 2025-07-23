@@ -3,21 +3,17 @@ import math
 import pickle
 from typing import List
 
+import igraph as ig
+import leidenalg as la
 import networkx as nx
 import numpy as np
 from loguru import logger as log
-from matplotlib import pyplot as plt
 from tqdm.auto import tqdm
 
 from vrp_study.configs import ModelConfig
 from vrp_study.initial_solution_builder import InitialSolutionBuilder
-from vrp_study.routing_manager import RoutingManager, InnerNode
-from .pdptw_routing_manager_builder import PDRoutingManagerBuilder
 from vrp_study.pdptw_model.routing_model import find_optimal_paths
-from vrp_study.data_model import Cargo
-
-import igraph as ig
-import leidenalg as la
+from vrp_study.routing_manager import RoutingManager, InnerNode
 
 
 # def solve_sub_cargos(cargos, routing_manager, init_sols=None):
@@ -81,8 +77,8 @@ class SolutionBuilder(InitialSolutionBuilder):
                         cg.add_edge(a.id, c.id, length=cost)
         for u, v, d in cg.edges(data=True):
             d['length'] = 1 / (d['length'] + 0.001)
-        with open('./cg.pkl', 'wb') as f:
-            pickle.dump(cg, f)
+        # with open('./cg.pkl', 'wb') as f:
+        #     pickle.dump(cg, f)
         cg = cg.to_undirected()
 
         # log.info(f"{len(cg.nodes()), len(cg.edges), nx.is_connected(cg)}")
@@ -140,9 +136,9 @@ class SolutionBuilder(InitialSolutionBuilder):
                                                        part.nodes()[point].id not in {part.cars()[i].start_node.id,
                                                                                       part.cars()[i].end_node.id}]
                 log.info(solution)
-                with open(f'./sols/sol_{NUM_SOl}', 'wb') as f:
-                    pickle.dump(car2path, f)
-                    NUM_SOl += 1
+                # with open(f'./sols/sol_{NUM_SOl}', 'wb') as f:
+                #     pickle.dump(car2path, f)
+                #     NUM_SOl += 1
                 if ii > 0 and ii % 3 == 0:
                     cars = [car for car in routing_manager.cars() if car.id in car2path]
                     nodes = [p for path in car2path.values() for p in path]
@@ -168,9 +164,9 @@ class SolutionBuilder(InitialSolutionBuilder):
                         else:
                             del car2path[part.cars()[i].id]
 
-                    with open(f'./sols/sol_{NUM_SOl}', 'wb') as f:
-                        pickle.dump(car2path, f)
-                        NUM_SOl += 1
+                    # with open(f'./sols/sol_{NUM_SOl}', 'wb') as f:
+                    #     pickle.dump(car2path, f)
+                    #     NUM_SOl += 1
 
         solution = []
         for i, car in enumerate(routing_manager.cars()):
@@ -214,7 +210,7 @@ class SolutionBuilder(InitialSolutionBuilder):
 
 def find_cms(g: ig.Graph, resolution):
     # Get clustering
-    partition = la.find_partition(g, partition_type=la.CPMVertexPartition, weights=g.write_edgelist('length'),
+    partition = la.find_partition(g, partition_type=la.CPMVertexPartition, weights=g.edge_attributes('length'),
                                   resolution_parameter=resolution)
     # Collect corresponding nodes
     communities = []
