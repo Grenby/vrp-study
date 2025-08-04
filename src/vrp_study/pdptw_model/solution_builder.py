@@ -208,11 +208,17 @@ class SolutionBuilder(InitialSolutionBuilder):
         # raise Exception
 
 
+# def find_cms(g: ig.Graph, resolution):
+#     # Get clustering
+#     partition = la.find_partition(g, partition_type=la.CPMVertexPartition, weights=g.edge_attributes('length'),
+#                                   resolution_parameter=resolution)
+    
 def find_cms(g: ig.Graph, resolution):
     # Get clustering
-    partition = la.find_partition(g, partition_type=la.CPMVertexPartition, weights=g.edge_attributes('length'),
-                                  resolution_parameter=resolution)
-    # Collect corresponding nodes
+    partition = la.find_partition(g, 
+                                  partition_type=la.CPMVertexPartition,
+                                  weights=g.es['length'],  # Исправлено здесь
+                                  resolution_parameter=resolution)    
     communities = []
     for community in partition:
         node_set = set()
