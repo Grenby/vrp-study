@@ -1,33 +1,18 @@
-from typing import Optional
+from vrp_study.data_model import Tariff, TariffCost, Node, Cargo
 
-import numpy as np
 
-from vrp_study.data_model import Cargo, Node, Tariff, TariffCost
-from vrp_study.configs import ModelConfig
-from vrp_study.pdptw_model.pdptw_routing_manager_builder import PDRoutingManagerBuilder
-
-__all__ = [
-    'get_rm'
-]
-
-def get_rm(
-        benchmark_type: str = 'pdp_400',
-        name: str = 'LC1_4_9.txt'
-):
-    tariff = None
-    cargos: list[Cargo] = []
-    depo: Optional[Node] = None
-
+def parse_data(path: str) -> tuple[Node, list[Cargo], Tariff]:
     id2info = {}
-    p2coordinates = {}
-    with open(f'../data/Li & Lim benchmark/{benchmark_type}/{name}', 'r') as file:
+    cargos = []
+
+    with open(path, 'r') as file:
         for i, line in enumerate(file):
             line = line.split('\t')
             if i == 0:
                 tariff = Tariff(
                     id='car',
                     capacity=int(line[1]),
-                    max_count=int(line[0]),
+                    max_count=100,
                     cost_per_distance=[TariffCost(
                         min_dst_km=0,
                         max_dst_km=10000,
@@ -71,7 +56,6 @@ def get_rm(
                         id2info[c_id] = {}
                     id2info[c_id][1] = (x, y, mass, et, lt, st, pick_up, delivery)
 
-
     for k, v in id2info.items():
         cargos.append(
             Cargo(
@@ -91,25 +75,4 @@ def get_rm(
             )
         )
 
-    p2coordinates.update({
-        crg.nodes[i].id: crg.nodes[i].coordinates for crg in cargos for i in range(2)
-    })
-    p2coordinates[depo.id] = depo.coordinates
-    distance_matrix = {(u, v): np.sqrt((du[0] - dv[0]) ** 2 + (du[1] - dv[1]) ** 2) for u, du in
-                       p2coordinates.items() for
-                       v, dv in p2coordinates.items()}
-    time_matrix = {(u, v): np.sqrt((du[0] - dv[0]) ** 2 + (du[1] - dv[1]) ** 2) for u, du in p2coordinates.items() for
-                   v, dv in p2coordinates.items()}
-
-    routing_manager = PDRoutingManagerBuilder(
-        distance_matrix=distance_matrix,
-        time_matrix=time_matrix,
-        model_config=ModelConfig(max_execution_time_minutes=1)
-    )
-
-    routing_manager.add_cargos(cargos)
-    routing_manager.add_tariff(tariff)
-
-    routing_manager.add_depo(depo)
-
-    return routing_manager.build()
+    return depo, cargos, tariff

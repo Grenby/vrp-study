@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
 from typing import Iterable, Dict, Tuple, List, Optional
-from loguru import logger as log
+
 import numpy as np
 
 from .configs import ModelConfig

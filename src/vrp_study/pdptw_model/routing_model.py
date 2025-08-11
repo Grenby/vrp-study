@@ -6,6 +6,7 @@ from loguru import logger as log
 from ortools.constraint_solver import pywrapcp, routing_enums_pb2
 from ortools.util.optional_boolean_pb2 import BOOL_FALSE, BOOL_TRUE
 
+from ..configs import ModelConfig
 from ..initial_solution_builder import InitialSolutionBuilder
 
 __all__ = [
@@ -40,7 +41,9 @@ class SolutionCallback:
         log.debug(f'time: {delta:.3f}; new solution ({count}): {value}; best solution: {best}')
 
 
-def get_optimal_model_params() -> pywrapcp.DefaultRoutingSearchParameters:
+def get_optimal_model_params(
+        model_config: ModelConfig
+) -> pywrapcp.DefaultRoutingSearchParameters:
     """
     Оптимальные параметры для модели.
     При изменении модели (например новые ограничения), эти параметры могут стать не самыми лучшими и потребуется доп
@@ -49,8 +52,8 @@ def get_optimal_model_params() -> pywrapcp.DefaultRoutingSearchParameters:
     :return: Оптимальные параметры для модели
     """
     search_parameters = pywrapcp.DefaultRoutingSearchParameters()
-    search_parameters.first_solution_strategy = routing_enums_pb2.FirstSolutionStrategy.PARALLEL_CHEAPEST_INSERTION
-    search_parameters.local_search_metaheuristic = routing_enums_pb2.LocalSearchMetaheuristic.GREEDY_DESCENT
+    search_parameters.first_solution_strategy = model_config.first_solution_type
+    search_parameters.local_search_metaheuristic = model_config.ls_type
     search_parameters.guided_local_search_lambda_coefficient = 0.0725
 
     search_parameters.local_search_operators.use_relocate = BOOL_FALSE
@@ -107,6 +110,11 @@ def get_optimal_model_params() -> pywrapcp.DefaultRoutingSearchParameters:
     search_parameters.use_cp_sat = True
     search_parameters.use_generalized_cp_sat = True
     search_parameters.sat_parameters.num_search_workers = 16
+
+    search_parameters.time_limit.seconds = int(60 * model_config.max_execution_time_minutes)
+    if model_config.max_solution_number > 0:
+        search_parameters.solution_limit = model_config.max_solution_number
+
     return search_parameters
 
 
@@ -393,10 +401,8 @@ def do_solve(
     conf = routing_manager.get_model_config()
 
     if not search_parameters:
-        search_parameters = get_optimal_model_params()
-        search_parameters.time_limit.seconds = int(60 * conf.max_execution_time_minutes)
-        if conf.max_solution_number > 0:
-            search_parameters.solution_limit = conf.max_solution_number
+        search_parameters = get_optimal_model_params(conf)
+
 
     search_parameters.log_search = False
 

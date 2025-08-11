@@ -16,26 +16,12 @@ from vrp_study.pdptw_model.routing_model import find_optimal_paths
 from vrp_study.routing_manager import RoutingManager, InnerNode
 
 
-# def solve_sub_cargos(cargos, routing_manager, init_sols=None):
-#     sub_manager = routing_manager.create_sub_problem(cargos, routing_manager.tariffs())
-#     sub_manager.max_time_minutes = 1
-#     sub_manager.max_solution_number = 20
-#     sols = find_optimal_paths(sub_manager, init_solution=init_sols)[0]
-#     for s in sols:
-#         if len(s) == 0:
-#             continue
-#         if s[0] == 0:
-#             s = s[1:-1]
-#         yield [routing_manager._node_to_inner_node[sub_manager.nodes()[index].routing_node].id for index in s]
-
-def get_epsilon(g: nx.Graph, path: list[int]):
-    pass
-
-
 @dataclasses.dataclass
 class SolutionBuilder(InitialSolutionBuilder):
     max_problem_size: int = 25
     inverse_weight: bool = False
+    save_graph: bool = False
+    name: str = ''
 
     def get_initial_solution(self, routing_manager: RoutingManager) -> List[List[InnerNode]]:
         cg = nx.DiGraph()
@@ -73,12 +59,23 @@ class SolutionBuilder(InitialSolutionBuilder):
                 if cost < 1.6:
                     if (a.id, c.id) in cg.edges():
                         cg.edges()[a.id, c.id]['length'] = min(cost, cg.edges()[a.id, c.id]['length'])
+                        cg.edges()[a.id, c.id]['l_ab'] = routing_manager.get_distance(a, b)
+                        cg.edges()[a.id, c.id]['l_cd'] = routing_manager.get_distance(c, d)
+                        cg.edges()[a.id, c.id]['l0'] = l0
+                        cg.edges()[a.id, c.id]['l1'] = l1
                     else:
-                        cg.add_edge(a.id, c.id, length=cost)
-        for u, v, d in cg.edges(data=True):
-            d['length'] = 1 / (d['length'] + 0.001)
-        # with open('./cg.pkl', 'wb') as f:
-        #     pickle.dump(cg, f)
+                        cg.add_edge(a.id, c.id,
+                                    length=cost,
+                                    l_ab=routing_manager.get_distance(a, b),
+                                    l_cd=routing_manager.get_distance(c, d),
+                                    l0=l0,
+                                    l1=l1
+                                    )
+
+        if self.save_graph:
+            with open(f'../data/graphs/{self.name}_cg.pkl', 'wb') as f:
+                pickle.dump(cg, f)
+
         cg = cg.to_undirected()
 
         # log.info(f"{len(cg.nodes()), len(cg.edges), nx.is_connected(cg)}")
@@ -120,7 +117,7 @@ class SolutionBuilder(InitialSolutionBuilder):
                     if iterations == 10:
                         break
 
-            for ii, c in enumerate(tqdm(cms)):
+            for ii, c in enumerate(cms):
                 nodes = [ccc for cc in c for ccc in start2end[cc]]
                 cars = [car for car in routing_manager.cars() if car.id not in car2path]
 
@@ -139,34 +136,34 @@ class SolutionBuilder(InitialSolutionBuilder):
                 # with open(f'./sols/sol_{NUM_SOl}', 'wb') as f:
                 #     pickle.dump(car2path, f)
                 #     NUM_SOl += 1
-                if ii > 0 and ii % 3 == 0:
-                    cars = [car for car in routing_manager.cars() if car.id in car2path]
-                    nodes = [p for path in car2path.values() for p in path]
+                # if ii > 0 and ii % 3 == 0:
+                #     cars = [car for car in routing_manager.cars() if car.id in car2path]
+                #     nodes = [p for path in car2path.values() for p in path]
+                #
+                #     part = routing_manager.sub_problem(
+                #         nodes,
+                #         cars,
+                #         ModelConfig(max_execution_time_minutes=0.5)
+                #     )
+                #
+                #     solution = []
+                #     for i, car in enumerate(routing_manager.cars()):
+                #         if car.id in car2path:
+                #             solution.append(car2path[car.id])
+                #         # else:
+                #         #     solution.append([])
+                #     solution = find_optimal_paths(part, init_solution=solution)[0]
+                #     for i, s in enumerate(solution):
+                #         if len(s) > 0:
+                #             car2path[part.cars()[i].id] = [part.nodes()[point] for point in s if
+                #                                            part.nodes()[point].id not in {part.cars()[i].start_node.id,
+                #                                                                           part.cars()[i].end_node.id}]
+                #         else:
+                #             del car2path[part.cars()[i].id]
 
-                    part = routing_manager.sub_problem(
-                        nodes,
-                        cars,
-                        ModelConfig(max_execution_time_minutes=0.5)
-                    )
-
-                    solution = []
-                    for i, car in enumerate(routing_manager.cars()):
-                        if car.id in car2path:
-                            solution.append(car2path[car.id])
-                        # else:
-                        #     solution.append([])
-                    solution = find_optimal_paths(part, init_solution=solution)[0]
-                    for i, s in enumerate(solution):
-                        if len(s) > 0:
-                            car2path[part.cars()[i].id] = [part.nodes()[point] for point in s if
-                                                           part.nodes()[point].id not in {part.cars()[i].start_node.id,
-                                                                                          part.cars()[i].end_node.id}]
-                        else:
-                            del car2path[part.cars()[i].id]
-
-                    # with open(f'./sols/sol_{NUM_SOl}', 'wb') as f:
-                    #     pickle.dump(car2path, f)
-                    #     NUM_SOl += 1
+                # with open(f'./sols/sol_{NUM_SOl}', 'wb') as f:
+                #     pickle.dump(car2path, f)
+                #     NUM_SOl += 1
 
         solution = []
         for i, car in enumerate(routing_manager.cars()):
@@ -177,48 +174,13 @@ class SolutionBuilder(InitialSolutionBuilder):
             # solution.append(car2path[car.id])
         return solution
 
-        #
-        # initial_solutions = []
-        # not_solved_cargos = []
-        # all_cargos = []
-        # for c in cms:
-        #     cargos = []
-        #     for i in c:
-        #         cargos.append(Cargo(id=len(cargos), nodes=[i.routing_node for i in start2end[i]]))
-        #
-        #     if len(cargos) < 2:
-        #         for c in cargos:
-        #             not_solved_cargos.append(Cargo(id=len(not_solved_cargos), nodes=[n for n in c.nodes]))
-        #         if len(not_solved_cargos) > 10:
-        #             cargos = not_solved_cargos
-        #             not_solved_cargos = []
-        #         else:
-        #             continue
-        #
-        #     # all_cargos.append(cargos)
-        #     for s in solve_sub_cargos(cargos, routing_manager):
-        #         initial_solutions.append(s)
-        #
-        # if len(not_solved_cargos) > 0:
-        #     print('solve not resolved')
-        #     for s in solve_sub_cargos(not_solved_cargos, routing_manager):
-        #         initial_solutions.append(s)
-        # print(len(set(x for a in initial_solutions for x in a)))
-        # return initial_solutions
-        # raise Exception
 
-
-# def find_cms(g: ig.Graph, resolution):
-#     # Get clustering
-#     partition = la.find_partition(g, partition_type=la.CPMVertexPartition, weights=g.edge_attributes('length'),
-#                                   resolution_parameter=resolution)
-    
 def find_cms(g: ig.Graph, resolution):
     # Get clustering
-    partition = la.find_partition(g, 
+    partition = la.find_partition(g,
                                   partition_type=la.CPMVertexPartition,
                                   weights=g.es['length'],  # Исправлено здесь
-                                  resolution_parameter=resolution)    
+                                  resolution_parameter=resolution)
     communities = []
     for community in partition:
         node_set = set()
