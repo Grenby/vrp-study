@@ -22,15 +22,8 @@ class SolutionBuilder(InitialSolutionBuilder):
     save_graph: bool = False
     name: str = ''
 
-    def get_initial_solution(self, routing_manager: RoutingManager) -> List[List[InnerNode]]:
+    def generate_full_graph(self, routing_manager: RoutingManager) -> nx.DiGraph:
         cg = nx.DiGraph()
-
-        start2end: dict[int, list[InnerNode]] = {}
-        for pd in routing_manager.get_pick_up_and_delivery_nodes():
-            a: InnerNode = routing_manager.nodes()[pd[0]]
-            b: InnerNode = routing_manager.nodes()[pd[1]]
-            cg.add_node(a.id)
-            start2end[a.id] = [a, b]
 
         for pd_indices1 in routing_manager.get_pick_up_and_delivery_nodes():
             pd1: list[InnerNode] = [routing_manager.nodes()[i] for i in pd_indices1]
@@ -44,36 +37,51 @@ class SolutionBuilder(InitialSolutionBuilder):
                     continue
 
                 l0 = routing_manager.get_distance(a, b) + routing_manager.get_distance(c, d) + 0.01
-                l1 = min(
+                t0 = routing_manager.get_time(a, b) + routing_manager.get_time(c, d) + 0.01
+
+                l1, t1, remainders = min(
                     get_len([a, b, c, d], routing_manager),
-                    # get_len([c, d, a, b], routing_manager),
 
                     get_len([a, c, d, b], routing_manager),
                     get_len([a, c, b, d], routing_manager),
 
-                    # get_len([c, a, b, d], routing_manager),
-                    # get_len([c, a, d, b], routing_manager),
+                    key=lambda x: x[0],
                 )
+
                 if l1 > 0 and math.isinf(l1):
                     continue
                 cost = min((l1 - l0) / l0, 2)
                 cost = np.exp(cost)
-                # print(l)
-                if cost < 1000:
+
+                if (a.id, c.id) not in cg.edges() or cost < cg.edges()[a.id, c.id]['length']:
                     if (a.id, c.id) in cg.edges():
                         cg.edges()[a.id, c.id]['length'] = min(cost, cg.edges()[a.id, c.id]['length'])
-                        cg.edges()[a.id, c.id]['l_ab'] = routing_manager.get_distance(a, b)
-                        cg.edges()[a.id, c.id]['l_cd'] = routing_manager.get_distance(c, d)
-                        cg.edges()[a.id, c.id]['l0'] = l0
-                        cg.edges()[a.id, c.id]['l1'] = l1
                     else:
-                        cg.add_edge(a.id, c.id,
-                                    length=cost,
-                                    l_ab=routing_manager.get_distance(a, b),
-                                    l_cd=routing_manager.get_distance(c, d),
-                                    l0=l0,
-                                    l1=l1
-                                    )
+                        cg.add_edge(a.id, c.id, length=cost)
+
+                    cg.edges()[a.id, c.id]['l_ab'] = routing_manager.get_distance(a, b)
+                    cg.edges()[a.id, c.id]['l_cd'] = routing_manager.get_distance(c, d)
+                    cg.edges()[a.id, c.id]['l0'] = l0
+                    cg.edges()[a.id, c.id]['l1'] = l1
+
+                    cg.edges()[a.id, c.id]['t_ab'] = routing_manager.get_time(a, b)
+                    cg.edges()[a.id, c.id]['t_cd'] = routing_manager.get_time(c, d)
+                    cg.edges()[a.id, c.id]['t0'] = t0
+                    cg.edges()[a.id, c.id]['t1'] = t1
+
+                    cg.edges()[a.id, c.id]['remainders'] = remainders
+
+        return cg
+
+    def get_initial_solution(self, routing_manager: RoutingManager) -> List[List[InnerNode]]:
+        cg = self.generate_full_graph(routing_manager)
+
+        start2end: dict[int, list[InnerNode]] = {}
+        for pd in routing_manager.get_pick_up_and_delivery_nodes():
+            a: InnerNode = routing_manager.nodes()[pd[0]]
+            b: InnerNode = routing_manager.nodes()[pd[1]]
+            cg.add_node(a.id)
+            start2end[a.id] = [a, b]
 
         if self.save_graph:
             with open(f'../data/graphs/{self.name}_cg.pkl', 'wb') as f:
@@ -193,16 +201,22 @@ def find_cms(g: ig.Graph, resolution):
     return communities
 
 
-def get_len(nodes: list[InnerNode], routing_manager: RoutingManager) -> float:
+def get_len(nodes: list[InnerNode], routing_manager: RoutingManager) -> tuple[float, float, list[float]]:
+    remainders = [nodes[0].end_time - nodes[0].start_time]
     time = int(nodes[0].start_time + nodes[0].service_time)
     total_length = 0
     prev = nodes[0]
     for node in nodes[1:]:
         time = time + routing_manager.get_time(prev, node)
+        remainders.append(node.end_time - int(time))
         total_length += routing_manager.get_distance(prev, node)
         a, b = node.start_time, node.end_time
         if time > b + 1:
-            return float('inf')
+            return float('inf'), float('inf'), []
         time = int(max(time, a) + node.service_time)
         prev = node
-    return total_length
+    return total_length, time, remainders
+
+
+def get_remainders(nodes: list[InnerNode], routing_manager: RoutingManager) -> list[float]:
+    pass
