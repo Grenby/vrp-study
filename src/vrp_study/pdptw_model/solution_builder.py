@@ -19,8 +19,6 @@ from vrp_study.routing_manager import RoutingManager, InnerNode
 class SolutionBuilder(InitialSolutionBuilder):
     max_problem_size: int = 25
     inverse_weight: bool = False
-    save_graph: bool = False
-    name: str = ''
 
     def generate_full_graph(self, routing_manager: RoutingManager) -> nx.DiGraph:
         cg = nx.DiGraph()
@@ -82,10 +80,6 @@ class SolutionBuilder(InitialSolutionBuilder):
             b: InnerNode = routing_manager.nodes()[pd[1]]
             cg.add_node(a.id)
             start2end[a.id] = [a, b]
-
-        if self.save_graph:
-            with open(f'../data/graphs/{self.name}_cg.pkl', 'wb') as f:
-                pickle.dump(cg, f)
 
         cg = cg.to_undirected()
 
