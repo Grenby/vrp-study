@@ -217,7 +217,7 @@ def add_time_window(
         transit_callback_index,
         max(node.end_time for node in routing_manager.nodes()),  # allow waiting time
         max(node.end_time for node in routing_manager.nodes()),  # maximum time per vehicle
-        False,  # Don't force start cumul to zero.
+        True,  # Don't force start cumul to zero.
         time_dimension_name,
     )
 

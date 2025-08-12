@@ -75,9 +75,7 @@ class RoutingManager:
         return self._inner_nodes
 
     def get_pick_up_and_delivery_nodes(self) -> List[List[int]]:
-        node_id2index = {n.id: i for i, n in enumerate(self._inner_nodes)}
-        res = [[node_id2index[n.id] for n in pdp.nodes] for pdp in self._pick_up_and_delivery_nodes]
-        return res
+        return [[self._id2index[n.id] for n in pdp.nodes] for pdp in self._pick_up_and_delivery_nodes]
 
     def get_depo_index(self) -> int:
         return self._depo_index

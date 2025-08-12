@@ -8,7 +8,6 @@ import leidenalg as la
 import networkx as nx
 import numpy as np
 from loguru import logger as log
-from tqdm.auto import tqdm
 
 from vrp_study.configs import ModelConfig
 from vrp_study.initial_solution_builder import InitialSolutionBuilder
@@ -25,6 +24,7 @@ class SolutionBuilder(InitialSolutionBuilder):
 
     def get_initial_solution(self, routing_manager: RoutingManager) -> List[List[InnerNode]]:
         cg = nx.DiGraph()
+
         start2end: dict[int, list[InnerNode]] = {}
         for pd in routing_manager.get_pick_up_and_delivery_nodes():
             a: InnerNode = routing_manager.nodes()[pd[0]]
@@ -32,14 +32,17 @@ class SolutionBuilder(InitialSolutionBuilder):
             cg.add_node(a.id)
             start2end[a.id] = [a, b]
 
-        for pd1 in routing_manager.get_pick_up_and_delivery_nodes():
-            pd1: list[InnerNode] = [routing_manager.nodes()[i] for i in pd1]
-            for pd2 in routing_manager.get_pick_up_and_delivery_nodes():
-                pd2: list[InnerNode] = [routing_manager.nodes()[i] for i in pd2]
+        for pd_indices1 in routing_manager.get_pick_up_and_delivery_nodes():
+            pd1: list[InnerNode] = [routing_manager.nodes()[i] for i in pd_indices1]
+            for pd_indices2 in routing_manager.get_pick_up_and_delivery_nodes():
+                pd2: list[InnerNode] = [routing_manager.nodes()[i] for i in pd_indices2]
+
                 a, b = pd1[0], pd1[1]
                 c, d = pd2[0], pd2[1]
+
                 if a.id == c.id:
                     continue
+
                 l0 = routing_manager.get_distance(a, b) + routing_manager.get_distance(c, d) + 0.01
                 l1 = min(
                     get_len([a, b, c, d], routing_manager),
@@ -56,7 +59,7 @@ class SolutionBuilder(InitialSolutionBuilder):
                 cost = min((l1 - l0) / l0, 2)
                 cost = np.exp(cost)
                 # print(l)
-                if cost < 1.6:
+                if cost < 1000:
                     if (a.id, c.id) in cg.edges():
                         cg.edges()[a.id, c.id]['length'] = min(cost, cg.edges()[a.id, c.id]['length'])
                         cg.edges()[a.id, c.id]['l_ab'] = routing_manager.get_distance(a, b)
@@ -80,9 +83,9 @@ class SolutionBuilder(InitialSolutionBuilder):
 
         # log.info(f"{len(cg.nodes()), len(cg.edges), nx.is_connected(cg)}")
 
-        if self.inverse_weight:
-            for u, v, d in cg.edges(data=True):
-                d['length'] = 1 / (0.0001 + d['length'])
+        # if self.inverse_weight:
+        for u, v, d in cg.edges(data=True):
+            d['length'] = 1 / (0.0001 + d['length'])
         ucg = cg.to_undirected()
         if nx.is_connected(ucg):
             graphs = [cg]
@@ -191,16 +194,15 @@ def find_cms(g: ig.Graph, resolution):
 
 
 def get_len(nodes: list[InnerNode], routing_manager: RoutingManager) -> float:
-    time = nodes[0].start_time + nodes[0].service_time
+    time = int(nodes[0].start_time + nodes[0].service_time)
     total_length = 0
     prev = nodes[0]
     for node in nodes[1:]:
-        time += routing_manager.get_time(prev, node)
+        time = time + routing_manager.get_time(prev, node)
         total_length += routing_manager.get_distance(prev, node)
         a, b = node.start_time, node.end_time
-        if time > b:
-            # log.info(f'time limit: {time}//{b}')
+        if time > b + 1:
             return float('inf')
-        time = max(time, a) + node.service_time
+        time = int(max(time, a) + node.service_time)
         prev = node
     return total_length
