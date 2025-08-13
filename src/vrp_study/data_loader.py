@@ -1,4 +1,4 @@
-from vrp_study.data_model import Tariff, TariffCost, Node, Cargo
+from .data_model import Tariff, TariffCost, Node, Cargo
 
 
 def parse_data(path: str) -> tuple[Node, list[Cargo], Tariff]:

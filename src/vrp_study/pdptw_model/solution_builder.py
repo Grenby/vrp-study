@@ -9,10 +9,10 @@ import networkx as nx
 import numpy as np
 from loguru import logger as log
 
-from vrp_study.configs import ModelConfig
-from vrp_study.initial_solution_builder import InitialSolutionBuilder
-from vrp_study.pdptw_model.routing_model import find_optimal_paths
-from vrp_study.routing_manager import RoutingManager, InnerNode
+from src.vrp_study.configs import ModelConfig
+from src.vrp_study.initial_solution_builder import InitialSolutionBuilder
+from src.vrp_study.pdptw_model.routing_model import find_optimal_paths
+from src.vrp_study.routing_manager import RoutingManager, InnerNode
 
 
 @dataclasses.dataclass

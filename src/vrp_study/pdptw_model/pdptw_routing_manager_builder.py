@@ -1,7 +1,7 @@
 from typing import Dict, Tuple, Optional, List
 
-from vrp_study.configs import ModelConfig
-from vrp_study.routing_manager import RoutingManagerBuilder, InnerNode, Pdp, InnerCar
+from src.vrp_study.configs import ModelConfig
+from src.vrp_study.routing_manager import RoutingManagerBuilder, InnerNode, Pdp, InnerCar
 
 
 class PDRoutingManagerBuilder(RoutingManagerBuilder):
