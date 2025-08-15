@@ -6,9 +6,10 @@ import networkx as nx
 import numpy as np
 
 import sys
+
 sys.path.append('../')
 
-from src.vrp_study.pdptw_model.pdptw_routing_manager_builder import PDRoutingManagerBuilder
+from vrp_study.managers.pdptw_routing_manager_builder import PDRoutingManagerBuilder
 from src.vrp_study.pdptw_model.routing_model import find_optimal_paths
 from src.vrp_study.data_loader import parse_data
 from src.vrp_study.configs import ModelConfig
@@ -85,6 +86,7 @@ def get_file_name(path: str, name: str) -> str:
         i += 1
     return f'{path}/{i}_{name}'
 
+
 def rms_calc(data):
     routing_manager, benchmark_type, name = data
     routing_manager: RoutingManager = routing_manager
@@ -94,7 +96,7 @@ def rms_calc(data):
     p = f'../data/Li & Lim benchmark/graphs/{benchmark_type}/graph_{name}.pkl'
 
     if not os.path.exists(p):
-        cg = sb.generate_full_graph(routing_manager)
+        cg = generate_full_graph(routing_manager)
         with open(p, 'wb') as f:
             pickle.dump(graph_to_real_node(cg, routing_manager), f)
 
@@ -115,8 +117,8 @@ def rms_calc(data):
 
 def main():
     log.remove()
-    NUM_WORKERS = 10
-    MAX_SIZE = max(10, NUM_WORKERS)  # создаем столько менеджеров. потом в парралель NUM_WORKERS  решают
+    NUM_WORKERS = 3
+    MAX_SIZE = NUM_WORKERS  # создаем столько менеджеров. потом в парралель NUM_WORKERS  решают
 
     arr_ls = [
         routing_enums_pb2.LocalSearchMetaheuristic.AUTOMATIC,
@@ -143,18 +145,19 @@ def main():
                     depo, cargos, tariff = parse_data(f'../data/Li & Lim benchmark/benchmarks/{benchmark_type}/{name}')
                     for ls in arr_ls:
                         for first in arr_first:
-                            rm = build_routing_manager(depo, cargos, tariff,p)
+                            rm = build_routing_manager(depo, cargos, tariff, p)
                             rm.get_model_config().ls_type = ls
                             rm.get_model_config().first_solution_type = first
                             rms.append((rm, benchmark_type, name))
                             if len(rms) >= MAX_SIZE:
                                 rr = list(p.imap_unordered(rms_calc, rms))
                                 rms = []
-                                x+=1
-                                if x == 3:
+                                x += 1
+                                if x == 2:
                                     return
                 break
     else:
+
         for benchmark_type in ['pdp_100']:  # os.listdir('../data/Li & Lim benchmark'):
             rms = []
             for name in tqdm(os.listdir(f'../data/Li & Lim benchmark/benchmarks/{benchmark_type}')):

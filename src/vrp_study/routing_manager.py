@@ -1,11 +1,10 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-from typing import Iterable, Dict, Tuple, List, Optional
+from typing import Iterable, Dict, Tuple, List, Optional, Self, Union
 
 import numpy as np
 
-from .configs import ModelConfig
-from .data_model import Tariff, Cargo, Node, Route
+from .data_model import Tariff, Cargo, Node
 from .data_model import TariffCost
 
 
@@ -41,7 +40,6 @@ class Pdp:
 
 @dataclass
 class RoutingManager:
-    _model_config: ModelConfig = field()
     _dsts: np.ndarray
     _time: np.ndarray
     _inner_nodes: List[InnerNode]
@@ -83,17 +81,13 @@ class RoutingManager:
     def get_depo_index(self) -> int:
         return self._depo_index
 
-    def get_model_config(self) -> ModelConfig:
-        return self._model_config
-
-    def sub_problem(self, nodes: List[InnerNode], cars: List[InnerCar], model_config: Optional[ModelConfig]):
+    def sub_problem(self, nodes: List[InnerNode], cars: List[InnerCar]):
         assert len(cars) > 0
         pdp_ids = {n.pdp_id for n in nodes}
         nodes_ids = {n.id for n in nodes}
         if self._depo_index not in nodes_ids:
             nodes = [self._inner_nodes[self._depo_index]] + nodes
         res = RoutingManager(
-            _model_config=model_config if model_config is not None else self._model_config,
             _dsts=self._dsts,
             _time=self._time,
             _inner_nodes=nodes,
@@ -108,17 +102,13 @@ class RoutingManagerBuilder(ABC):
     def __init__(self,
                  distance_matrix: Dict[Tuple[object, object], float],
                  time_matrix: Dict[Tuple[object, object], float],
-                 model_config: Optional[ModelConfig] = None
                  ):
 
         self.distance_matrix: Dict[Tuple[object, object], float] = distance_matrix
         self.time_matrix: Dict[Tuple[object, object], float] = time_matrix
 
-        if model_config is None:
-            self.model_config = ModelConfig()
-        else:
-            self.model_config = model_config
         self._nodes: List[Node] = []
+        self._depots: List[Node] = []
         self._cargos: List[Cargo] = []
         self._tariffs: List[Tariff] = []
 
@@ -130,13 +120,21 @@ class RoutingManagerBuilder(ABC):
 
         self._pdp: List[Pdp] = []
 
-        self._depo: Optional[Node] = None
-
+    @property
     def cargos(self) -> List[Cargo]:
         return self._cargos
 
+    @property
     def tariffs(self) -> List[Tariff]:
         return self._tariffs
+
+    @property
+    def nodes(self) -> List[Node]:
+        return self._nodes
+
+    @property
+    def depots(self) -> List[Node]:
+        return self._depots
 
     def add_tariff(self, tariff: Tariff):
         self._tariffs.append(tariff)
@@ -145,12 +143,23 @@ class RoutingManagerBuilder(ABC):
         for t in tariffs:
             self.add_tariff(t)
 
+    def with_tariffs(self, tariffs: Union[Iterable[Tariff], Tariff]) -> Self:
+        if isinstance(tariffs, Iterable):
+            self.add_tariffs(tariffs)
+        else:
+            self.add_tariff(tariffs)
+        return self
+
     def add_node(self, node: Node):
         self._nodes.append(node)
 
     def add_nodes(self, nodes: Iterable[Node]):
         for n in nodes:
             self.add_node(n)
+
+    def with_nodes(self, nodes: Iterable[Node]) -> Self:
+        self.add_nodes(nodes)
+        return self
 
     def add_cargo(self, cargo: Cargo):
         self._cargos.append(cargo)
@@ -161,8 +170,23 @@ class RoutingManagerBuilder(ABC):
         for c in cargos:
             self.add_cargo(c)
 
-    def add_depo(self, depo: Node):
-        self._depo = depo
+    def with_cargos(self, cargos: Iterable[Cargo]) -> Self:
+        self.add_cargos(cargos)
+        return self
+
+    def add_depot(self, depo: Node):
+        self._depots.append(depo)
+
+    def add_depots(self, depots: Iterable[Node]):
+        for depo in depots:
+            self.add_depot(depo)
+
+    def with_depo(self, depots: Union[Iterable[Node], Node]) -> Self:
+        if isinstance(depots, Iterable):
+            self.add_depots(depots)
+        else:
+            self.add_depot(depots)
+        return self
 
     def build(self) -> RoutingManager:
         self._validate()
@@ -186,7 +210,6 @@ class RoutingManagerBuilder(ABC):
         self._build_distance_matrix()
 
         return RoutingManager(
-            _model_config=self.model_config,
             _dsts=self._np_dsts,
             _time=self._np_time,
             _inner_nodes=self._inner_nodes,
@@ -233,8 +256,3 @@ class RoutingManagerBuilder(ABC):
                 time[i, j] = self.time_matrix[n1.routing_node.id, n2.routing_node.id]
         self._np_dsts = dsts
         self._np_time = time
-
-
-def convert_solution(solution: List[List[InnerNode]]) -> List[Route[Node]]:
-    # todo сделать конвертер
-    raise NotImplementedError

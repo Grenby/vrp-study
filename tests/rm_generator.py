@@ -4,7 +4,7 @@ import numpy as np
 
 from src.vrp_study.data_model import Cargo, Node, Tariff, TariffCost
 from src.vrp_study.configs import ModelConfig
-from src.vrp_study.pdptw_model.pdptw_routing_manager_builder import PDRoutingManagerBuilder
+from vrp_study.managers.pdptw_routing_manager_builder import PDRoutingManagerBuilder
 
 __all__ = [
     'get_rm'
@@ -104,7 +104,7 @@ def get_rm(
     routing_manager = PDRoutingManagerBuilder(
         distance_matrix=distance_matrix,
         time_matrix=time_matrix,
-        model_config=ModelConfig(max_execution_time_minutes=1)
+        model_config=ModelConfig(max_execution_time_minutes=0.1)
     )
 
     routing_manager.add_cargos(cargos)

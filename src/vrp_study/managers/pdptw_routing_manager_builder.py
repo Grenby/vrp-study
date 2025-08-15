@@ -1,6 +1,5 @@
 from typing import Dict, Tuple, Optional, List
 
-from src.vrp_study.configs import ModelConfig
 from src.vrp_study.routing_manager import RoutingManagerBuilder, InnerNode, Pdp, InnerCar
 
 
@@ -9,13 +8,11 @@ class PDRoutingManagerBuilder(RoutingManagerBuilder):
     def __init__(
             self,
             distance_matrix: Dict[Tuple[object, object], float],
-            time_matrix: Dict[Tuple[object, object], float],
-            model_config: Optional[ModelConfig] = None
+            time_matrix: Dict[Tuple[object, object], float]
     ):
         super().__init__(
             distance_matrix=distance_matrix,
-            time_matrix=time_matrix,
-            model_config=model_config
+            time_matrix=time_matrix
         )
         self._start_node: Optional[InnerNode] = None
         self._common_end_node: Optional[InnerNode] = None
@@ -23,12 +20,12 @@ class PDRoutingManagerBuilder(RoutingManagerBuilder):
     def _create_inner_nodes(self):
         start_node = InnerNode(
             id=0,
-            start_time=self._depo.start_time,
-            end_time=self._depo.end_time,
+            start_time=self._depots[0].start_time,
+            end_time=self._depots[0].end_time,
             service_time=0,
             demand=0,
             is_transit=False,
-            routing_node=self._depo
+            routing_node=self._depots[0]
         )
         self._start_node = start_node
         self._common_end_node = start_node
@@ -61,7 +58,6 @@ class PDRoutingManagerBuilder(RoutingManagerBuilder):
             count = tariff.max_count
             for i in range(count):
                 for tc in tariff.cost_per_distance:
-                    # дублирование автопарка, чтобы использовать все имеющиеся машины
                     cars.append(
                         InnerCar(
                             id=len(cars),
