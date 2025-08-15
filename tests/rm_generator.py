@@ -2,9 +2,9 @@ from typing import Optional
 
 import numpy as np
 
-from vrp_study.data_model import Cargo, Node, Tariff, TariffCost
-from vrp_study.configs import ModelConfig
-from vrp_study.pdptw_model.pdptw_routing_manager_builder import PDRoutingManagerBuilder
+from src.vrp_study.data_model import Cargo, Node, Tariff, TariffCost
+from src.vrp_study.configs import ModelConfig
+from src.vrp_study.pdptw_model.pdptw_routing_manager_builder import PDRoutingManagerBuilder
 
 __all__ = [
     'get_rm'
@@ -27,7 +27,7 @@ def get_rm(
                 tariff = Tariff(
                     id='car',
                     capacity=int(line[1]),
-                    max_count=int(line[0]),
+                    max_count=100,
                     cost_per_distance=[TariffCost(
                         min_dst_km=0,
                         max_dst_km=10000,

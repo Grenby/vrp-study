@@ -447,11 +447,14 @@ def find_optimal_paths(
         init_solution = [[id2index[n.id] for n in s] for s in init_solution]
 
     log.info(f'problem size: {len(routing_manager.nodes())}')
-    score, solution, times = do_solve(
+    res = do_solve(
         routing_manager,
         init_solution=init_solution,
         cost='car'
     )
+    if res is None:
+        return None
+    score, solution, times = res
     solution = [s[1:-1] for s in solution if len(s[1:-1]) > 0]
     score = len([s for s in solution if len(s) > 0])
     log.info(f"best_score: {score}")
@@ -463,10 +466,13 @@ def find_optimal_paths(
         routing_manager.get_model_config()
     )
     car_id2index = {car.id: i for i, car in enumerate(routing_manager_sub.cars())}
-    score, solution, times = do_solve(
+    res = do_solve(
         routing_manager_sub,
         init_solution=solution,
     )
+    if res is None:
+        return None
+    score, solution, times = res
     log.info(f"best_score: {score / 100:.2f}")
     solution = [solution[car_id2index[car.id]] if car.id in car_id2index else [] for car in routing_manager.cars()]
     return solution, times

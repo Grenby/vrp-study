@@ -53,6 +53,9 @@ class RoutingManager:
     def __post_init__(self):
         self._id2index = {n.id: i for i, n in enumerate(self._inner_nodes)}
 
+    def get_node(self, node_id: int) -> InnerNode:
+        return self.nodes()[self._id2index[node_id]]
+
     def get_index(self, node: InnerNode):
         return self._id2index[node.id]
 
