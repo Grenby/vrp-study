@@ -46,13 +46,13 @@ class VRPModel:
         self._constraints_names.add(constraint_name)
 
 
-class OrToolsModelBuilder(Protocol):
+class OrToolsModelSaturator(Protocol):
     def apply(self, model: VRPModel):
         pass
 
 
 @dataclass
-class DistanceDimensionBuilderOrTools(OrToolsModelBuilder):
+class DistanceDimensionSaturator(OrToolsModelSaturator):
     car_distance_upper_bound: int = field(default=int(1e6))
     name: str = field(default='distance')
 
@@ -80,7 +80,7 @@ class DistanceDimensionBuilderOrTools(OrToolsModelBuilder):
 
 
 @dataclass
-class CapacityDimensionBuilderOrTools(OrToolsModelBuilder):
+class CapacityDimensionSaturator(OrToolsModelSaturator):
     name: str = field(default='capacity')
 
     # index: int = field(default=0)
@@ -106,7 +106,7 @@ class CapacityDimensionBuilderOrTools(OrToolsModelBuilder):
 
 
 @dataclass
-class TimeDimensionBuilderOrTools(OrToolsModelBuilder):
+class TimeDimensionSaturator(OrToolsModelSaturator):
     max_value: int = field()
     max_slack: int = field()
     time_dimension_name: str = field(default='time')
@@ -137,7 +137,7 @@ class TimeDimensionBuilderOrTools(OrToolsModelBuilder):
 
 
 @dataclass
-class TimeConstraintBuilderOrTools(OrToolsModelBuilder):
+class TimeConstraintSaturator(OrToolsModelSaturator):
     time_dimension_name: str = field(default='time')
 
     def apply(self, model: VRPModel):
@@ -166,7 +166,7 @@ class TimeConstraintBuilderOrTools(OrToolsModelBuilder):
 
 
 @dataclass
-class PDPConstraintBuilderOrTools(OrToolsModelBuilder):
+class PDPConstraintSaturator(OrToolsModelSaturator):
     dimension_name: str = 'distance'
 
     def apply(self, model: VRPModel):
@@ -194,7 +194,7 @@ class PDPConstraintBuilderOrTools(OrToolsModelBuilder):
 
 
 @dataclass
-class LinearCostByKmBuilderOrTools(OrToolsModelBuilder):
+class LinearCostByDistanceSaturator(OrToolsModelSaturator):
     distance_diminsion_name: str = 'distance'
 
     def apply(self, model: VRPModel):
@@ -215,12 +215,12 @@ class LinearCostByKmBuilderOrTools(OrToolsModelBuilder):
 class VRPModelFactory(ModelFactory[VRPModel]):
 
     def __init__(self):
-        self._constraints: list[OrToolsModelBuilder] = []
-        self._dimensions: list[OrToolsModelBuilder] = []
-        self._costs: list[OrToolsModelBuilder] = []
+        self._constraints: list[OrToolsModelSaturator] = []
+        self._dimensions: list[OrToolsModelSaturator] = []
+        self._costs: list[OrToolsModelSaturator] = []
 
-    def with_dimensions(self, dimensions: Iterable[OrToolsModelBuilder] | OrToolsModelBuilder,
-                        *args: OrToolsModelBuilder) -> Self:
+    def with_dimensions(self, dimensions: Iterable[OrToolsModelSaturator] | OrToolsModelSaturator,
+                        *args: OrToolsModelSaturator) -> Self:
         if isinstance(dimensions, Iterable):
             self._dimensions.extend(dimensions)
         else:
@@ -228,8 +228,8 @@ class VRPModelFactory(ModelFactory[VRPModel]):
         self._dimensions.extend(args)
         return self
 
-    def with_constraints(self, constraints: Iterable[OrToolsModelBuilder] | OrToolsModelBuilder,
-                         *args: OrToolsModelBuilder) -> Self:
+    def with_constraints(self, constraints: Iterable[OrToolsModelSaturator] | OrToolsModelSaturator,
+                         *args: OrToolsModelSaturator) -> Self:
         if isinstance(constraints, Iterable):
             self._constraints.extend(constraints)
         else:
@@ -237,7 +237,7 @@ class VRPModelFactory(ModelFactory[VRPModel]):
         self._constraints.extend(args)
         return self
 
-    def with_cost(self, costs: Iterable[OrToolsModelBuilder] | OrToolsModelBuilder, *args: OrToolsModelBuilder) -> Self:
+    def with_cost(self, costs: Iterable[OrToolsModelSaturator] | OrToolsModelSaturator, *args: OrToolsModelSaturator) -> Self:
         if isinstance(costs, Iterable):
             self._costs.extend(costs)
         else:
@@ -255,17 +255,17 @@ class VRPModelFactory(ModelFactory[VRPModel]):
     @classmethod
     def get_pdptw_model_factory(cls, routing_manager: RoutingManager) -> "VRPModelFactory":
         return VRPModelFactory().with_dimensions([
-            DistanceDimensionBuilderOrTools(),
-            TimeDimensionBuilderOrTools(
+            DistanceDimensionSaturator(),
+            TimeDimensionSaturator(
                 max_slack=max(node.end_time for node in routing_manager.nodes()),
                 max_value=max(node.end_time for node in routing_manager.nodes())
             ),
-            CapacityDimensionBuilderOrTools()
+            CapacityDimensionSaturator()
         ]).with_constraints([
-            TimeConstraintBuilderOrTools(),
-            PDPConstraintBuilderOrTools()
+            TimeConstraintSaturator(),
+            PDPConstraintSaturator()
         ]).with_cost(
-            LinearCostByKmBuilderOrTools()
+            LinearCostByDistanceSaturator()
         )
 
 
