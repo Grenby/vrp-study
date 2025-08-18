@@ -46,7 +46,7 @@ class RoutingManager:
     _inner_cars: List[InnerCar]
     _pick_up_and_delivery_nodes: List[Pdp]
     _depo_index: int
-    _id2index: Optional[dict[int, int]] = field(init=False)
+    _id2index: dict[int, int] = field(default_factory=dict)
 
     def __post_init__(self):
         self._id2index = {n.id: i for i, n in enumerate(self._inner_nodes)}
@@ -112,8 +112,8 @@ class RoutingManagerBuilder(ABC):
         self._cargos: List[Cargo] = []
         self._tariffs: List[Tariff] = []
 
-        self._np_dsts: Optional[np.ndarray] = None
-        self._np_time: Optional[np.ndarray] = None
+        self._np_dsts: np.ndarray
+        self._np_time: np.ndarray
 
         self._inner_nodes: List[InnerNode] = []
         self._inner_cars: List[InnerCar] = []
