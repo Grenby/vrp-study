@@ -11,7 +11,10 @@ readme = "README.md"
 requires-python = ">=3.12,<=3.12.8"
 
 [tool.poetry]
-packages = [{ include = "vrp_study", from = "src" }]
+packages = [
+    { include = "vrp_study", from = "src" },
+    { include = "pfa_study", from = "src" }
+]
 
 
 [build-system]
@@ -46,6 +49,13 @@ pympler = "^1.1"
 objgraph = "^3.6.2"
 graphviz = "^0.21"
 mypy = "^1.17.1"
+ride-pfa = "^0.1.2"
+
+
+[tool.poetry.group.pfa_study]
+optional=true
+[tool.poetry.group.pfa_study.dependencies]
+pyscipopt = "^5.5.0"
 
 
 [[tool.mypy.overrides]]
